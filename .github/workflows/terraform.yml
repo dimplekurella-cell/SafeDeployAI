@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   terraform-check:
-    name: Terraform Format and Validate
+    name: Terraform Format, Validate and Plan
     runs-on: ubuntu-latest
 
     steps:
@@ -29,10 +29,13 @@ jobs:
         run: terraform fmt -check -recursive
 
       - name: Initialize Terraform
-        run: terraform init -backend=false
+        run: terraform init
 
       - name: Validate Terraform
         run: terraform validate
+
+      - name: Terraform Plan
+        run: terraform plan -input=false
 
   aws-oidc-check:
     name: Verify Secure AWS Access
@@ -51,4 +54,3 @@ jobs:
 
       - name: Verify AWS identity
         run: aws sts get-caller-identity
-
