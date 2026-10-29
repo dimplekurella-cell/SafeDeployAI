@@ -15,6 +15,10 @@ jobs:
   terraform-check:
     name: Terraform Format, Validate and Plan
     runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+    permissions:
+      contents: read
+      id-token: write
 
     steps:
       - name: Checkout repository
@@ -24,6 +28,12 @@ jobs:
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: "1.16.6"
+
+      - name: Configure AWS credentials through OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ap-south-1
 
       - name: Check formatting
         run: terraform fmt -check -recursive
