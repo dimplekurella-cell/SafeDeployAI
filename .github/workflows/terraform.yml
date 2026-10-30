@@ -7,6 +7,15 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      confirm_apply:
+        description: "Confirm deployment to AWS"
+        required: true
+        type: choice
+        options:
+          - no
+          - yes
+        default: no
 
 permissions:
   contents: read
@@ -47,6 +56,10 @@ jobs:
       - name: Terraform Plan
         run: terraform plan -input=false
 
+      - name: Terraform Apply
+        if: github.event_name == 'workflow_dispatch' && inputs.confirm_apply == 'yes'
+        run: terraform apply -input=false -auto-approve
+
   aws-oidc-check:
     name: Verify Secure AWS Access
     if: github.event_name != 'pull_request'
@@ -64,3 +77,4 @@ jobs:
 
       - name: Verify AWS identity
         run: aws sts get-caller-identity
+
