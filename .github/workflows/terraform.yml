@@ -8,14 +8,11 @@ on:
     branches: [main]
   workflow_dispatch:
     inputs:
-      confirm_apply:
-        description: "Confirm deployment to AWS"
+      deploy:
+        description: "Approve Terraform deployment"
         required: true
-        type: choice
-        options:
-          - no
-          - yes
-        default: no
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -23,58 +20,50 @@ permissions:
 jobs:
   terraform-check:
     name: Terraform Format, Validate and Plan
-    runs-on: ubuntu-latest
     if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       id-token: write
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+      - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: "1.16.6"
 
-      - name: Configure AWS credentials through OIDC
-        uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ap-south-1
 
-      - name: Check formatting
-        run: terraform fmt -check -recursive
+      - run: terraform fmt -check -recursive
+      - run: terraform init
+      - run: terraform validate
+      - run: terraform plan -input=false
 
-      - name: Initialize Terraform
-        run: terraform init
-
-      - name: Validate Terraform
-        run: terraform validate
-
-      - name: Terraform Plan
-        run: terraform plan -input=false
-
-      - name: Terraform Apply
-        if: github.event_name == 'workflow_dispatch' && inputs.confirm_apply == 'yes'
-        run: terraform apply -input=false -auto-approve
-
-  aws-oidc-check:
-    name: Verify Secure AWS Access
-    if: github.event_name != 'pull_request'
+  terraform-apply:
+    name: Deploy AWS Infrastructure
+    needs: terraform-check
+    if: github.event_name == 'workflow_dispatch' && inputs.deploy == true
     runs-on: ubuntu-latest
     permissions:
       contents: read
       id-token: write
 
     steps:
-      - name: Configure AWS credentials through OIDC
-        uses: aws-actions/configure-aws-credentials@v4
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.16.6"
+
+      - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ap-south-1
 
-      - name: Verify AWS identity
-        run: aws sts get-caller-identity
+      - run: terraform init
+      - run: terraform apply -input=false -auto-approve
 
