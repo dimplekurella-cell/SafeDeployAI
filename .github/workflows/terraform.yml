@@ -1,4 +1,3 @@
-
 name: SafeDeploy AI - Terraform CI
 
 on:
@@ -20,7 +19,7 @@ permissions:
 jobs:
   terraform-check:
     name: Terraform Format, Validate and Plan
-    if: github.event_name != 'pull_request'
+    # Runs on PRs, pushes to main, and manual workflow dispatches
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -46,6 +45,7 @@ jobs:
   terraform-apply:
     name: Deploy AWS Infrastructure
     needs: terraform-check
+    # Strictly gates deployment to manual dispatch with deploy=true
     if: github.event_name == 'workflow_dispatch' && inputs.deploy == true
     runs-on: ubuntu-latest
     permissions:
@@ -66,4 +66,3 @@ jobs:
 
       - run: terraform init
       - run: terraform apply -input=false -auto-approve
-
